@@ -23,6 +23,10 @@ struct flip_clock_ipadApp: App {
                 .environmentObject(timeManager)
                 .environmentObject(settingsManager)
                 .preferredColorScheme(.dark)
+                .onAppear {
+                    // 确保屏幕常亮设置生效
+                    UIApplication.shared.isIdleTimerDisabled = true
+                }
         }
     }
 }

@@ -20,9 +20,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
                 .contentShape(Rectangle()) // 确保整个背景可点击
                 .onTapGesture {
-                    withAnimation {
-                        showSettingsButton = true
-                    }
+                    showSettingsButton = true
                     startHideTimer()
                 }
             
@@ -51,7 +49,6 @@ struct ContentView: View {
                     }
                     Spacer()
                 }
-                .transition(.opacity.combined(with: .scale))
             }
         }
         .sheet(isPresented: $showSettings) {
@@ -68,9 +65,7 @@ struct ContentView: View {
         hideTask = Task {
             try? await Task.sleep(nanoseconds: 10 * 1_000_000_000)
             if !Task.isCancelled {
-                withAnimation {
-                    showSettingsButton = false
-                }
+                showSettingsButton = false
             }
         }
     }
