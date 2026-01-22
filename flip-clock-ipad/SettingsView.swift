@@ -17,11 +17,28 @@ struct SettingsView: View {
                 Section(header: Text("时间显示")) {
                     Toggle("显示秒", isOn: $settingsManager.showSeconds)
                     
-                    Picker("时间制式", selection: $settingsManager.is24Hour) {
-                        Text("12小时制").tag(false)
-                        Text("24小时制").tag(true)
+                    HStack {
+                        Text("时制")
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Picker("", selection: $settingsManager.is24Hour) {
+                            Text("12小时制").tag(false)
+                            Text("24小时制").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
                     }
-                    .pickerStyle(.segmented)
+                }
+                
+                Section {
+                    HStack {
+                        Spacer()
+                        Text("©️ 由 田昊天 开发")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
                 }
             }
             .navigationTitle("设置")
