@@ -15,6 +15,7 @@ struct FlipDigitView: View {
     @State private var previousDigit: Int = 0
     @State private var flipAngle: Double = 0
     @State private var showNext: Bool = false
+    @State private var animationTask: DispatchWorkItem?
     
     init(digit: Int, cardWidth: CGFloat = 160, cardHeight: CGFloat = 200) {
         self.digit = digit
@@ -111,7 +112,7 @@ struct FlipDigitView: View {
                         axis: (x: 1, y: 0, z: 0),
                         anchor: .bottom
                     )
-                    .opacity(flipAngle <= 90 ? 1 : 0)
+                    .opacity(flipAngle < 90 ? 1 : 0)
                     
                     // 分隔线
                     Rectangle()
@@ -140,17 +141,21 @@ struct FlipDigitView: View {
                         )
                     )
                     .rotation3DEffect(
-                        .degrees(showNext ? (90 - flipAngle) : (180 - flipAngle)),
+                        .degrees(flipAngle),
                         axis: (x: 1, y: 0, z: 0),
                         anchor: .top
                     )
                     .opacity(flipAngle >= 90 ? 1 : 0)
                 }
+                .drawingGroup() // 将整个动画层合并为一个渲染层，优化性能
             }
         }
         .frame(width: cardWidth, height: cardHeight)
         .onChange(of: digit) { oldValue, newValue in
             if oldValue != newValue {
+                // 取消之前的动画任务
+                animationTask?.cancel()
+                
                 previousDigit = oldValue
                 showNext = false
                 flipAngle = 0
@@ -161,18 +166,28 @@ struct FlipDigitView: View {
                 }
                 
                 // 翻到一半时切换数字，下半部分向上翻
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                let task1 = DispatchWorkItem {
                     showNext = true
                     withAnimation(.easeOut(duration: 0.15)) {
                         flipAngle = 0
                     }
                     
                     // 动画结束后重置
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    let task2 = DispatchWorkItem {
                         flipAngle = 0
+                        animationTask = nil
                     }
+                    animationTask = task2
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: task2)
                 }
+                animationTask = task1
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: task1)
             }
+        }
+        .onDisappear {
+            // 清理动画任务
+            animationTask?.cancel()
+            animationTask = nil
         }
     }
 }
