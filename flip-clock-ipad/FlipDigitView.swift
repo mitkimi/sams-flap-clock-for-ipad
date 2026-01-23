@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct FlipDigitView: View {
+struct FlipDigitView: View, Equatable {
     let digit: Int
     let cardWidth: CGFloat
     let cardHeight: CGFloat
@@ -16,6 +16,10 @@ struct FlipDigitView: View {
         self.digit = digit
         self.cardWidth = cardWidth
         self.cardHeight = cardHeight
+    }
+    
+    static func == (lhs: FlipDigitView, rhs: FlipDigitView) -> Bool {
+        lhs.digit == rhs.digit && lhs.cardWidth == rhs.cardWidth && lhs.cardHeight == rhs.cardHeight
     }
     
     var body: some View {
@@ -78,6 +82,7 @@ struct FlipDigitView: View {
             }
         }
         .frame(width: cardWidth, height: cardHeight)
+        .drawingGroup() // 优化GPU渲染性能
     }
 }
 

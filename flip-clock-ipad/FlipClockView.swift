@@ -11,88 +11,84 @@ struct FlipClockView: View {
     @EnvironmentObject var timeManager: TimeManager
     @EnvironmentObject var settingsManager: SettingsManager
     
+    // 缓存卡片尺寸，避免每次重新计算
+    @State private var cardWidth: CGFloat = 160
+    @State private var cardHeight: CGFloat = 200
+    @State private var digitSpacing: CGFloat = 12
+    @State private var groupSpacing: CGFloat = 30
+    
     var body: some View {
-        GeometryReader { geometry in
-            let cardSize = calculateCardSize(screenWidth: geometry.size.width, showSeconds: settingsManager.showSeconds)
-            let cardWidth = cardSize.width
-            let cardHeight = cardSize.height
-            let digitSpacing = cardWidth * 0.075
-            let groupSpacing = cardWidth * 0.1875
+        HStack(spacing: settingsManager.showSeconds ? groupSpacing * 0.5 : groupSpacing) {
+            // 小时
+            HStack(spacing: digitSpacing) {
+                FlipDigitView(digit: hourTens, cardWidth: cardWidth, cardHeight: cardHeight)
+                    .id("hourTens-\(hourTens)")
+                FlipDigitView(digit: hourOnes, cardWidth: cardWidth, cardHeight: cardHeight)
+                    .id("hourOnes-\(hourOnes)")
+            }
             
-            HStack(spacing: settingsManager.showSeconds ? groupSpacing * 0.5 : groupSpacing) {
-                // 小时
+            // 冒号分隔符（带闪烁动画）
+            ColonView(cardWidth: cardWidth, showSeconds: settingsManager.showSeconds)
+                .environmentObject(timeManager)
+            
+            // 分钟
+            HStack(spacing: digitSpacing) {
+                FlipDigitView(digit: minuteTens, cardWidth: cardWidth, cardHeight: cardHeight)
+                    .id("minuteTens-\(minuteTens)")
+                FlipDigitView(digit: minuteOnes, cardWidth: cardWidth, cardHeight: cardHeight)
+                    .id("minuteOnes-\(minuteOnes)")
+            }
+            
+            // 秒（如果启用）
+            if settingsManager.showSeconds {
+                // 第二个冒号分隔符
+                ColonView(cardWidth: cardWidth, showSeconds: settingsManager.showSeconds)
+                    .environmentObject(timeManager)
+                
+                // 秒
                 HStack(spacing: digitSpacing) {
-                    FlipDigitView(digit: hourTens, cardWidth: cardWidth, cardHeight: cardHeight)
-                    FlipDigitView(digit: hourOnes, cardWidth: cardWidth, cardHeight: cardHeight)
-                }
-                
-                // 冒号分隔符（带闪烁动画）
-                colonView(cardWidth: cardWidth)
-                
-                // 分钟
-                HStack(spacing: digitSpacing) {
-                    FlipDigitView(digit: minuteTens, cardWidth: cardWidth, cardHeight: cardHeight)
-                    FlipDigitView(digit: minuteOnes, cardWidth: cardWidth, cardHeight: cardHeight)
-                }
-                
-                // 秒（如果启用）
-                if settingsManager.showSeconds {
-                    // 第二个冒号分隔符
-                    colonView(cardWidth: cardWidth)
-                    
-                    // 秒
-                    HStack(spacing: digitSpacing) {
-                        FlipDigitView(digit: secondTens, cardWidth: cardWidth, cardHeight: cardHeight)
-                        FlipDigitView(digit: secondOnes, cardWidth: cardWidth, cardHeight: cardHeight)
-                    }
+                    FlipDigitView(digit: secondTens, cardWidth: cardWidth, cardHeight: cardHeight)
+                        .id("secondTens-\(secondTens)")
+                    FlipDigitView(digit: secondOnes, cardWidth: cardWidth, cardHeight: cardHeight)
+                        .id("secondOnes-\(secondOnes)")
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear {
+                        updateCardSize(width: geometry.size.width)
+                    }
+                    .onChange(of: geometry.size.width) { _, newWidth in
+                        updateCardSize(width: newWidth)
+                    }
+                    .onChange(of: settingsManager.showSeconds) { _, _ in
+                        updateCardSize(width: geometry.size.width)
+                    }
+            }
+        )
     }
     
-    private func calculateCardSize(screenWidth: CGFloat, showSeconds: Bool) -> (width: CGFloat, height: CGFloat) {
-        let margin: CGFloat = 80 // 左右边距
-        let availableWidth = screenWidth - margin * 2
+    private func updateCardSize(width: CGFloat) {
+        let margin: CGFloat = 80
+        let availableWidth = width - margin * 2
         
-        // 计算需要的元素数量
-        let digitCount: CGFloat = showSeconds ? 6 : 4
-        let colonCount: CGFloat = showSeconds ? 2 : 1
-        let digitSpacing: CGFloat = showSeconds ? 0.075 : 0.075 // 相对于卡片宽度的比例
-        let groupSpacing: CGFloat = showSeconds ? 0.09375 : 0.1875 // 相对于卡片宽度的比例
-        let colonWidth: CGFloat = showSeconds ? 0.125 : 0.25 // 相对于卡片宽度的比例
+        let digitCount: CGFloat = settingsManager.showSeconds ? 6 : 4
+        let colonCount: CGFloat = settingsManager.showSeconds ? 2 : 1
+        let digitSpacingRatio: CGFloat = 0.075
+        let groupSpacingRatio: CGFloat = settingsManager.showSeconds ? 0.09375 : 0.1875
+        let colonWidthRatio: CGFloat = settingsManager.showSeconds ? 0.125 : 0.25
         
-        // 计算卡片宽度：availableWidth = digitCount * cardWidth + (digitCount - 1) * digitSpacing * cardWidth + colonCount * colonWidth * cardWidth + (digitCount/2 - 1) * groupSpacing * cardWidth
-        // 简化：availableWidth = cardWidth * (digitCount + (digitCount - 1) * digitSpacing + colonCount * colonWidth + (digitCount/2 - 1) * groupSpacing)
-        let totalFactor = digitCount + (digitCount - 1) * digitSpacing + colonCount * colonWidth + (digitCount / 2 - 1) * groupSpacing
-        let cardWidth = availableWidth / totalFactor
+        let totalFactor = digitCount + (digitCount - 1) * digitSpacingRatio + colonCount * colonWidthRatio + (digitCount / 2 - 1) * groupSpacingRatio
+        let newCardWidth = availableWidth / totalFactor
+        let newCardHeight = newCardWidth * 1.25
         
-        // 卡片高度保持 1.25 的比例
-        let cardHeight = cardWidth * 1.25
-        
-        return (width: cardWidth, height: cardHeight)
-    }
-    
-    private func colonView(cardWidth: CGFloat) -> some View {
-        VStack(spacing: cardWidth * 0.05) {
-            Circle()
-                .fill(Color.white)
-                .frame(width: cardWidth * 0.1, height: cardWidth * 0.1)
-                .opacity(blinkingOpacity)
-            
-            Circle()
-                .fill(Color.white)
-                .frame(width: cardWidth * 0.1, height: cardWidth * 0.1)
-                .opacity(blinkingOpacity)
-        }
-        .padding(.horizontal, settingsManager.showSeconds ? cardWidth * 0.0625 : cardWidth * 0.125)
-        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: blinkingOpacity)
-    }
-    
-    
-    private var blinkingOpacity: Double {
-        let seconds = Calendar.current.component(.second, from: timeManager.currentTime)
-        return seconds % 2 == 0 ? 1.0 : 0.3
+        cardWidth = newCardWidth
+        cardHeight = newCardHeight
+        digitSpacing = newCardWidth * digitSpacingRatio
+        groupSpacing = newCardWidth * groupSpacingRatio
     }
     
     private var hourTens: Int {
@@ -133,5 +129,41 @@ struct FlipClockView: View {
     private var secondOnes: Int {
         let second = Calendar.current.component(.second, from: timeManager.currentTime)
         return second % 10
+    }
+}
+
+// 独立的冒号视图，优化动画性能
+struct ColonView: View {
+    let cardWidth: CGFloat
+    let showSeconds: Bool
+    @EnvironmentObject var timeManager: TimeManager
+    @State private var opacity: Double = 1.0
+    
+    var body: some View {
+        VStack(spacing: cardWidth * 0.05) {
+            Circle()
+                .fill(Color.white)
+                .frame(width: cardWidth * 0.1, height: cardWidth * 0.1)
+                .opacity(opacity)
+            
+            Circle()
+                .fill(Color.white)
+                .frame(width: cardWidth * 0.1, height: cardWidth * 0.1)
+                .opacity(opacity)
+        }
+        .padding(.horizontal, showSeconds ? cardWidth * 0.0625 : cardWidth * 0.125)
+        .onChange(of: timeManager.currentTime) { _, _ in
+            let seconds = Calendar.current.component(.second, from: timeManager.currentTime)
+            let newOpacity = seconds % 2 == 0 ? 1.0 : 0.3
+            if abs(newOpacity - opacity) > 0.01 {
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    opacity = newOpacity
+                }
+            }
+        }
+        .onAppear {
+            let seconds = Calendar.current.component(.second, from: timeManager.currentTime)
+            opacity = seconds % 2 == 0 ? 1.0 : 0.3
+        }
     }
 }
