@@ -32,7 +32,7 @@ struct ContentView: View {
             
             // 设置按钮
             if showSettingsButton {
-                VStack {
+        VStack {
                     HStack {
                         Spacer()
                         Button(action: {
